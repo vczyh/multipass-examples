@@ -16,15 +16,15 @@ write_files:
   - content:  |
       #!/bin/bash
       set -e
-
+      
       function updateConfig() {
         key=$1
         value=$2
         file="/etc/redis/redis.conf"
-
+      
         # Omit $value here, in case there is sensitive information
         echo "[Redis Configuring] '$key' in '$file'"
-
+      
         # If config exists in file, replace it. Otherwise, append to file.
         if grep -E -q "^$key" "$file"; then
           sed -r -i "s#^$key.*#$key $value#g" "$file" #note that no config values may contain an '@' char
@@ -32,38 +32,39 @@ write_files:
           echo "$key $value" >> "$file"
         fi
       }
-
+      
       # set master auth.
       echo "config set masteruser replica-user" | redis-cli
       echo "config set masterauth 123" | redis-cli
-
+      
       # set replica user.
       echo "ACL SETUSER replica-user on >123 +psync +replconf +ping" | redis-cli
       # set sentinel user.
       echo "ACL SETUSER sentinel-user ON >123 allchannels +multi +slaveof +ping +exec +subscribe +config|rewrite +role +publish +info +client|setname +client|kill +script|kill" | redis-cli
       # Set default user password.
       echo "ACL SETUSER default >123" | redis-cli
-
+      
       # persistence.
       echo "config rewrite" | redis-cli -a 123
-
+      
       systemctl stop redis-server
       updateConfig "bind" "0.0.0.0"
       systemctl start redis-server
+
     path: /etc/redis/redis-init.sh
     permissions: '0755'
   - content:  |
       #!/bin/bash
       set -e
-
+      
       function updateConfig() {
         key=$1
         value=$2
         file="/etc/redis/sentinel.conf"
-
+      
         # Omit $value here, in case there is sensitive information
         echo "[Redis Sentinel Configuring] '$key' in '$file'"
-
+      
         # If config exists in file, replace it. Otherwise, append to file.
         if grep -E -q "^$key" "$file"; then
           sed -r -i "s#^$key.*#$key $value#g" "$file" #note that no config values may contain an '@' char
@@ -71,15 +72,15 @@ write_files:
           echo "$key $value" >> "$file"
         fi
       }
-
+      
       # Set sentinel auth.
       echo "sentinel config set sentinel-user default" | redis-cli -p 26379
       echo "sentinel config set sentinel-pass 123" | redis-cli -p 26379
-
-
+      
+      
       # Remove default mymaster.
       echo "sentinel remove mymaster" | redis-cli -p 26379
-
+      
       # Set default user acl.
       echo "acl setuser default >123" | redis-cli -p 26379
       echo "sentinel flushconfig" | redis-cli -p 26379 -a 123
@@ -87,22 +88,23 @@ write_files:
     permissions: '0755'
   - content:  |
       #!/bin/bash
-
+      
       set -e
-
+      
       master=$1
-
+      
       echo "replicaof $master 6379" | redis-cli -a 123
       echo "config rewrite" | redis-cli -a 123
+
     path: /etc/redis/replica.sh
     permissions: '0755'
   - content:  |
       #!/bin/bash
-
+      
       set -e
-
+      
       master=$1
-
+      
       # Set redis auth.
       echo "sentinel monitor mymaster $master 6379 2" | redis-cli -p 26379 -a 123
       echo "sentinel set mymaster auth-user sentinel-user" | redis-cli -p 26379 -a 123

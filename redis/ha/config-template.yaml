@@ -1,0 +1,31 @@
+#cloud-config
+
+packages:
+  - net-tools
+
+runcmd:
+  - sudo apt install lsb-release -y
+  - curl -fsSL "https://packages.redis.io/gpg" | sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
+  - echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/redis.list
+  - sudo apt-get update
+  - sudo apt-get install redis redis-sentinel -y
+  - /etc/redis/redis-init.sh
+  - /etc/redis/sentinel-init.sh
+
+write_files:
+  - content:  |
+      {{ redis_init }}
+    path: /etc/redis/redis-init.sh
+    permissions: '0755'
+  - content:  |
+      {{ sentinel_init }}
+    path: /etc/redis/sentinel-init.sh
+    permissions: '0755'
+  - content:  |
+      {{ replica }}
+    path: /etc/redis/replica.sh
+    permissions: '0755'
+  - content:  |
+      {{ sentinel_monitor }}
+    path: /etc/redis/sentinel-monitor.sh
+    permissions: '0755'
