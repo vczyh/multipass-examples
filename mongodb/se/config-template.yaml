@@ -1,0 +1,18 @@
+#cloud-config
+#
+# Ubuntu 18.04
+#
+packages:
+  - net-tools
+runcmd:
+  - add-apt-repository ppa:xapienz/curl34 -y
+  - apt-get update
+  # mongod need
+  - apt install libcurl3 -y
+  - /usr/bin/mongodb-install.sh
+
+write_files:
+  - content:  |
+      {{ mongodb_install }}
+    path: /usr/bin/mongodb-install.sh
+    permissions: '0755'
